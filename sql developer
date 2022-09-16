@@ -1,0 +1,418 @@
+ALTER SESSION SET "_ORACLE_SCRIPT" = true;
+
+SET SERVEROUTPUT ON
+
+---------------------------------------------------------------
+-- 1)   GESTIÓN DE USUARIOS Y TABLAS --------------------------
+---------------------------------------------------------------
+
+-- 1. Usuario "GESTOR"
+--Creamos el usuario Gestor
+CREATE USER GESTOR IDENTIFIED BY 1234;
+/
+--Permiso para crear sesión
+GRANT CREATE SESSION TO GESTOR
+/
+--Privilegios Alter sobre la tabla asignaturas_pac
+GRANT ALTER ON asignaturas_pac TO GESTOR;
+/
+--Privilegios Alter sobre la tabla alumnos_pac
+GRANT ALTER ON activ_pac TO GESTOR;
+/
+
+--Conectado con el usuario Gestor
+--Añadir campo nuevo CIUDAD 
+ALTER SESSION SET "_ORACLE_SCRIPT"=TRUE;
+SET SERVEROUTPUT ON
+ALTER TABLE act_pac.activ_pac ADD CIUDAD VARCHAR2 (30);
+/
+--En la tabla asignaturas modificar el nombre_profesor a varchar(30)
+ALTER TABLE act_pac.asignaturas_pac MODIFY nombre_profesor VARCHAR2(50);
+/
+--Eliminar el campo creditos de la tabla asignaturas
+ALTER TABLE act_pac.asignaturas_pac DROP COLUMN creditos;
+/
+--Añadir el campo Ciclo en la tabla asignaturas
+ALTER TABLE act_pac.asignaturas_pac ADD ciclo varchar2(3);
+/
+
+
+-- 2. Usuario "DIRECTOR"
+--Creación del rol
+CREATE ROLE ROL_DIRECTOR;
+/
+--Creación del nuevo usuario
+CREATE USER DIRECTOR IDENTIFIED BY 1234;
+/
+--Asignamos el privilegio de crear sesión al usuario director
+GRANT CREATE SESSION TO DIRECTOR;
+--Asignamos los privilegios al rol
+GRANT SELECT, INSERT, ALTER ON ALUMNOS_PAC TO ROL_DIRECTOR;
+GRANT SELECT, INSERT, ALTER ON ASIGNATURAS_PAC TO ROL_DIRECTOR;
+/
+--Asignamos el rol al usuario director
+GRANT ROL_DIRECTOR TO DIRECTOR;
+/
+
+
+
+--Conectado con el usuario DIRECTOR
+--Insertar un registro en la tabla alumnos con mis datos
+INSERT INTO act_pac.activ_pac(id_alumno)VALUES ('Madosa');
+--insertar un registro en la tabla asignaturas
+INSERT INTO act_PAC.asignaturas_pac VALUES ('DAX_M02B','MP2.Bases de datos B','Claudi García','DAX');
+--Modificar el cliclo del registro
+UPDATE act_PAC.asignaturas_pac SET ciclo='DAW' WHERE ciclo='DAX';
+/
+----------------------------------------------------------------------------------------------------------------------
+
+-- 2)	BLOQUES ANONIMOS -------------------------------------- 
+---------------------------------------------------------------
+ALTER SESSION SET "_ORACLE_SCRIPT"=TRUE;
+SET SERVEROUTPUT ON;
+-- 1. TABLA DE MULTIPLICAR
+--Tabla de multiplicar del uno usando saltos de línea
+DECLARE
+tabladel CONSTANT NUMBER(2):=1;
+contador NUMBER(2):=1;
+BEGIN
+WHILE contador<=11 LOOP
+DBMS_OUTPUT.PUT_LINE(tabladel||' x '||contador||'= '||tabladel*contador||CHR(10));
+contador:=contador+1;
+END LOOP;
+END;
+/
+
+
+-- 2. %IRPF SALARIO BRUTO ANUAL
+DECLARE
+--Declaro la constante salario_mes asignando el valor de 2000
+salario_mes CONSTANT NUMBER(10,2):=2000;
+--Declaro una variable para calcular el salario anual
+salario_anual NUMBER(10);
+--Declaro una variable para asignar el procentaje de IRPF de la consulta
+Porcentaje_irpf NUMBER(10);
+--Declaro una variable para asignar el total de irpf a pagar
+pago_irpf Number(10):=(salario_anual*porcentaje_irpf)/100;
+BEGIN
+DBMS_OUTPUT.PUT_LINE('Salario mensual: '||salario_mes||' €');
+--Calculo y muestro por consola el salario Anual multiplicando por 12
+salario_anual:=salario_mes*12;
+DBMS_OUTPUT.PUT_LINE('Salario anual: '||salario_anual||' €');
+--Realizo la consulta para asignar el valor a la variable porcentaje_irpf
+SELECT porcentaje INTO porcentaje_irpf
+FROM act_pac.irpf_pac
+WHERE valor_bajo<salario_anual AND valor_alto>salario_anual;
+--Ya tenemos asignado el valor del porcentaje de IRPF a la variable
+--Muestro por pantalla el porcentaje y el dinero a pagar
+DBMS_OUTPUT.PUT_LINE('IRPF aplicado: '||porcentaje_irpf||' %');
+DBMS_OUTPUT.PUT_LINE('IRPF a pagar: '||pago_irpf||' €');
+
+END;
+/
+---------------------------------------------------------------
+
+---------------------------------------------------------------
+
+
+-- 3)	PROCEDIMIENTOS Y FUNCIONES SIMPLES -------------------- 
+---------------------------------------------------------------
+
+-- 1. SUMA IMPARES
+ALTER SESSION SET "_ORACLE_SCRIPT"=TRUE;
+SET SERVEROUTPUT ON;
+--Creo el procedimiento que recibe un número como parámetro
+CREATE OR REPLACE PROCEDURE SUMA_IMPARES (numero_entero IN OUT NUMBER)
+IS
+--Creo una variable para asignar el valor de la variable pasada por parámetros
+numero_Elegido NUMBER(10):=numero_entero;
+--Creo una variable que se incrementará con el valor de los impares
+numeros_impares NUMBER(10):=1;
+--Creo una variable para almacenar la suma de los impares
+suma_numeros NUMBER(10):=0;
+BEGIN
+--Inicio un bucle while loop
+WHILE numeros_impares<=numero_elegido LOOP
+suma_numeros:=suma_numeros+numeros_impares;
+numeros_impares:=numeros_impares+2;
+END LOOP;
+--Escribo el resultado de la suma de impares
+DBMS_OUTPUT.PUT_LINE('El resultado de la suma de impares es: '||suma_numeros);
+END;
+/
+
+-- 2. NUMERO MAYOR
+--Creo una función que necesita 3 números por parámetros
+CREATE OR REPLACE FUNCTION NUMERO_MAYOR (NUM1 NUMBER, NUM2 NUMBER, NUM3 NUMBER)
+RETURN NUMBER
+AS
+--Declaro el número al que asignaré el valor del número mayor
+numero_mayor NUMBER(10);
+BEGIN
+--Inicio un bloque if
+if num1>num2 and num1>num3 then
+numero_mayor:=num1;
+return numero_mayor;
+ELSIF num2>num1 and num2>num3 then
+numero_mayor:=num2;
+return numero_mayor;
+ELsif num3>num1 and num3>num2 then
+numero_mayor:=num3;
+return numero_mayor;
+END IF;
+--Captura de excepciones que lanza un mensaje por consola
+EXCEPTION
+WHEN OTHERS
+THEN 
+DBMS_OUTPUT.PUT_LINE('No se pueden repetir números en la secuencia');
+END;
+/
+
+
+---------------------------------------------------------------
+
+
+
+
+-- 4)	PROCEDIMIENTOS Y FUNCIONES COMPLEJAS ------------------ 
+---------------------------------------------------------------
+
+-- 1. DATOS DE EMPLEADO Y SU IRPF
+ALTER SESSION SET"_ORACLE_SCRIPT"=TRUE;
+SET SERVEROUTPUT ON;
+--Creo el procedimiento IRPF_EMPLEADO
+CREATE OR REPLACE PROCEDURE IRPF_EMPLEADO (num_Empleado NUMBER)
+IS
+--Creo una variable para asignar el valor de num_empleado
+numero_empleado NUMBER(10):= num_empleado;
+--Creo variables para el nombre, apellido, salario anual, el tramo y el IRPF
+nombre_emp VARCHAR(10);
+apellido_emp VARCHAR(10);
+salario_anual_emp NUMBER(10);
+tramo_emp NUMBER(10);
+irpf_emp NUMBER(10);
+BEGIN
+--Asigno valores a las variables anteriores
+SELECT NOMBRE INTO nombre_emp
+FROM act_pac.empleados_pac
+WHERE id_empleado=numero_empleado;
+
+SELECT APELLIDOS INTO apellido_emp
+FROM act_pac.empleados_pac
+WHERE id_empleado=numero_empleado;
+
+SELECT SALARIO INTO salario_anual_emp
+FROM act_pac.empleados_pac
+WHERE id_empleado=numero_empleado;
+--Utilizo el valor asignado a salario_anual_emp para asignar el tramo y el irpf
+SELECT TRAMO_IRPF INTO tramo_emp
+FROM act_pac.irpf_pac
+WHERE valor_bajo<=salario_anual_emp and valor_alto>salario_anual_emp;
+
+SELECT porcentaje INTO irpf_emp
+FROM act_pac.irpf_pac
+WHERE tramo_irpf=tramo_emp;
+--Escribo los resultados por pantalla
+DBMS_OUTPUT.PUT_LINE('id del empleado:'||numero_empleado||CHR(10)||
+'Nombre del empleado: '||nombre_emp||CHR(10)||
+'Apellido del emplado: '||apellido_emp||CHR(10)||
+'Salario anual del empleado: '||salario_anual_emp||CHR(10)||
+'Tramo: '||tramo_emp||CHR(10)|| 'IRPF: '||irpf_emp||'%');
+EXCEPTION
+WHEN OTHERS
+THEN
+--Mensaje del control de excepciones
+DBMS_OUTPUT.PUT_LINE('El número de empleado no existe en la tabla');
+END;
+/
+
+
+-- 2. NUMERO DE EMPLEADOS POR TRAMO DE IRPF
+--Creo la función con 1 número en los parámetros
+CREATE OR REPLACE FUNCTION EMPLEADOS_TRAMOS_IRPF(num_tramo NUMBER)
+RETURN NUMBER
+AS
+--Creo una variable para asignar el valor de num_tramo
+numero_tramo NUMBER(10):=num_tramo;
+--Creo las variables a las que asignaré el valor alto y bajo
+num_valorAlto NUMBER(20);
+num_valorBajo NUMBER(20);
+numTotal_empleados NUMBER(10);
+BEGIN
+--Consulto para asignar el valor alto y bajo
+SELECT valor_alto INTO num_valorAlto
+FROM act_pac.irpf_pac
+WHERE tramo_IRPF=numero_tramo;
+
+SELECT valor_bajo INTO num_valorBajo
+FROM act_pac.irpf_pac
+WHERE tramo_irpf=numero_tramo;
+--Voy a usar las variables anteriores y la función count para contar registros
+SELECT count(nombre) INTO numTotal_empleados
+FROM act_pac.empleados_pac
+WHERE salario<num_valorAlto and salario>=num_valorBajo;
+RETURN numTotal_empleados;
+END EMPLEADOS_TRAMOS_IRPF;
+/
+---------------------------------------------------------------
+
+-- 5)	GESTIÓN DE TRIGGERS ----------------------------------- 
+---------------------------------------------------------------
+
+
+-- 1. COMPENSACIÓN SALARIO POR CAMBIO TRAMO
+--Creo el trigger con la cláusula before, indicando salario y su tabla
+CREATE OR REPLACE TRIGGER COMPENSA_TRAMO_IRPF BEFORE
+UPDATE OF SALARIO ON EMPLEADOS_PAC
+FOR EACH ROW
+DECLARE
+--Declaro dos variables para asignar los tramos
+tramo_irpf1 NUMBER(10);
+tramo_irpf2 NUMBER(10);
+BEGIN
+--Realizo la consulta para asignar las variables anteriores
+SELECT tramo_irpf INTO tramo_irpf1
+FROM  irpf_pac
+WHERE :old.salario BETWEEN valor_bajo AND valor_alto;
+
+SELECT tramo_irpf INTO tramo_irpf2 
+FROM irpf_pac
+WHERE :new.salario BETWEEN valor_bajo AND valor_alto;
+--Escribo un bloque if para valorar las dos variables y asignar el incremento
+IF (tramo_irpf2>tramo_irpf1)
+THEN :new.salario := :new.salario+1000;
+END IF; 
+END;
+/
+
+
+-- 2. HISTORICO DE CAMBIOS DE SALARIO
+--Creo la tabla Audita_salarios
+CREATE TABLE audita_salarios(
+id_emp NUMBER(2),
+salario_antiguo NUMBER(10,2),
+salario_nuevo NUMBER(10,2),
+fecha DATE,
+hora VARCHAR2(10),
+username VARCHAR2(10)
+);
+/
+--Creo el trigger con la cláusula AFTER
+CREATE OR REPLACE TRIGGER MODIFICACIONES_SALARIOS AFTER
+UPDATE OF salario ON empleados_pac
+FOR EACH ROW
+DECLARE
+--Declaro dos variables, una para asginar hora y otra el nombre del usuario
+var_hora VARCHAR2(10);
+nombre_usuario VARCHAR2(10);
+
+BEGIN
+--Uso la tabla dual en las consultas
+SELECT user INTO nombre_usuario 
+FROM dual;
+
+SELECT to_char(sysdate,'HH24:MI:ss') INTO var_hora FROM dual;
+--Inserción de los datos y de las variables anteriores
+INSERT INTO audita_salarios(id_emp,salario_antiguo,salario_nuevo,fecha, hora, username)
+VALUES (:old.id_empleado,:old.salario, :new.salario, sysdate, var_hora, nombre_usuario);
+END;
+/
+---------------------------------------------------------------
+
+
+-- 1.	COMPROBACIÓN REGISTROS DE TABLAS
+SELECT *FROM act_pac.activ_pac;
+SELECT * FROM act_pac.asignaturas_pac;
+/
+EXECUTE dbms_output.put_line('-- 1.	COMPROBACIÓN REGISTROS DE TABLAS');
+/
+
+-- 2.	COMPROBACIÓN DEL PROCEDIMIENTO “SUMA_IMPARES”
+DECLARE
+--Declaro una variable para el número de prueba
+num_prueba NUMBER(10):=6;
+BEGIN
+act_pac.suma_impares(num_prueba);
+END;
+/
+EXECUTE dbms_output.put_line('-- 2.	COMPROBACIÓN DEL PROCEDIMIENTO “SUMA_IMPARES”');
+/
+
+-- 3.	COMPROBACIÓN DE LA FUNCION “NUMERO_MAYOR”
+DECLARE
+num1 NUMBER(10):=23;
+num2 NUMBER(10):=37;
+NUM3 NUMBER(10):=32;
+NUM_mas_grande NUMBER(10);
+BEGIN
+NUM_mas_grande:=act_pac.numero_mayor(23,37,32);
+DBMS_OUTPUT.PUT_LINE('“El mayor entre (23, 37, 32) es: '||NUM_mas_grande);
+END;
+/
+EXECUTE dbms_output.put_line('-- 3.	COMPROBACIÓN DE LA FUNCION “NUMERO_MAYOR”');
+/
+
+-- 4.	COMPROBACIÓN DEL PROCEDIMIENTO “IRPF_EMPLEADO”
+DECLARE
+BEGIN
+act_PAC.IRPF_EMPLEADO(1);
+END;
+/
+EXECUTE dbms_output.put_line('-- 4.	COMPROBACIÓN DEL PROCEDIMIENTO “IRPF_EMPLEADO”');
+/
+
+-- 5.	COMPROBACIÓN DE LA FUNCION “EMPLEADOS_TRAMOS_IRPF”
+DECLARE
+num_prueba NUMBER(10):=5;
+num_empleados NUMBER(10);
+BEGIN
+num_empleados:=act_pac.empleados_tramos_irpf(num_prueba);
+DBMS_OUTPUT.PUT_LINE('En el tramo 5 de IRP, tenemos a '||num_empleados||' empleados');
+END;
+/
+EXECUTE dbms_output.put_line('-- 5.	COMPROBACIÓN DE LA FUNCION “EMPLEADOS_TRAMOS_IRPF”');
+/
+
+
+
+-- 6.	COMPROBACIÓN DE LOS TRIGGERS
+DECLARE
+numero_empleado NUMBER(10);
+salario NUMBER(10);
+--Seleccionamos los valores del empleado elegido
+nombre_emp VARCHAR2(20);
+fecha_emp DATE;
+hora_emp VARCHAR2(10);
+salario_antiguo_emp NUMBER(10);
+salario_nuevo_emp NUMBER(10);
+BEGIN
+--Pedimos al usuario información para asignar a las variables
+numero_empleado:='&num_empleado';
+salario:='&salario';
+update act_pac.audita_salarios SET salario_nuevo=salario WHERE ID_EMP=NUMERO_EMPLEADO;
+
+--Consultas para asignar valor a las variables
+SELECT nombre INTO nombre_emp
+FROM act_pac.empleados_pac
+WHERE id_empleado=numero_empleado;
+
+SELECT fecha INTO fecha_emp
+FROM act_pac.audita_salarios
+WHERE salario_nuevo=salario;
+
+SELECT HORA INTO hora_emp
+FROM act_pac.audita_salarios
+WHERE  salario_nuevo=salario;
+
+SELECT salario_antiguo INTO salario_antiguo_emp
+FROM act_pac.audita_salarios
+WHERE id_emp=numero_empleado;
+
+SELECT salario_nuevo INTO salario_nuevo_emp
+FROM act_pac.audita_salarios
+WHERE id_emp=numero_empleado;
+--Muestro por pantalla los datos
+DBMS_OUTPUT.PUT_LINE('El salario del empleado '||nombre_emp||' se ha modificado el día '||fecha_emp||' '||hora_emp||', antes era de '||CHR(10)||salario_antiguo_emp||' € y ahora es de '||salario_nuevo_emp||'€');
+END;
+/
+EXECUTE dbms_output.put_line('-- 6.	COMPROBACIÓN DE LOS TRIGGERS');
